@@ -2,10 +2,16 @@ var _ = require('lodash');
 
 var Maranon = function(schema) {
   var caches = {};
+  var subscriptions = {};
   var thiz = {};
 
-  function initEntityCache(type, typeName) {
+  function init() {
+    _.forOwn(schema, initTypeCache);
+  }
+
+  function initTypeCache(type, typeName) {
     caches[typeName] = Cache(type);
+    subscriptions[typeName] = [];
     addGettersAndSettersFor(type, typeName);
   }
 
@@ -37,8 +43,8 @@ var Maranon = function(schema) {
     _.each(type.getBy, _.partial(addGetsForTypeAndProperty, typeNameFnSuffixPlural, typeName));
 
     // add setters
-    thiz['put' + typeNameFnSuffix] = buildPut(typeName);
-    thiz['put' + typeNameFnSuffixPlural] = buildPuts(typeName);
+    thiz['put' + typeNameFnSuffix] = _.partial(putAndPublish, typeName);
+    thiz['put' + typeNameFnSuffixPlural] = _.partial(putsAndPublish, typeName);
   }
 
   function addIndexedGetForTypeAndProperty(typeNameFnSuffix, typeName, property) {
@@ -82,23 +88,48 @@ var Maranon = function(schema) {
     return entity;
   }
 
-  function buildPut(typeName) {
-    return function(entity) {
-      return put(typeName, entity);
-    };
+  function putAndPublish(typeName, entity) {
+    var rtn = put(typeName, entity);
+    publishPut(typeName);
+    return rtn;
   }
 
-  function buildPuts(typeName) {
-    return function(entities) {
-      return _.map(entities, buildPut(typeName));
-    };
+  function putsAndPublish(typeName, entities) {
+    var rtn = _.map(entities, _.partial(put, typeName));
+    publishPut(typeName);
+    return rtn;
   }
 
-  _.forOwn(schema, initEntityCache);
+  function publishPut(typeName) {
+    _.invoke(subscriptions[typeName], 'action');
+  }
 
-  thiz.wipe = function() {
+  function subscribe(id, typeName, action) {
+    subscriptions[typeName].push({
+      id: id,
+      action: action
+    });
+  }
+
+  function unsubscribe(id, typeName) {
+    subscriptions[typeName] = _.reject(subscriptions[typeName], _.matchesProperty('id', id));
+  }
+
+  function unsubscribeAll(id) {
+    _.each(_.keys(subscriptions), _.partial(unsubscribe, id));
+  }
+
+  function wipe() {
     caches = {};
-  };
+    subscriptions = {};
+  }
+
+  thiz.subscribe = subscribe;
+  thiz.unsubscribe = unsubscribe;
+  thiz.unsubscribeAll = unsubscribeAll;
+  thiz.wipe = wipe;
+
+  init();
 
   return thiz;
 };

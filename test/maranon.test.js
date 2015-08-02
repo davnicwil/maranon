@@ -1,5 +1,5 @@
 var expect = require("chai").expect;
-var Cashew = require("../maranon.js");
+var Maranon = require("../maranon.js");
 
 var schema = {
   "person" : {
@@ -281,5 +281,141 @@ describe('When I build a Maranon cache with a schema containing person, house an
 
     expect(subsetTwoSortedById[0].name).to.equal('jack white');
     expect(subsetTwoSortedById[1].name).to.equal('mike johnson');
+  });
+
+  it('it should allow me to subsrcibe and unsubscribe actions to problem updates', function() {
+    var x = 0;
+    function incrementX() {
+      x += 1;
+    }
+
+    testObj.subscribe("someId", "person", incrementX);
+
+    expect(x).to.equal(0);
+
+    testObj.putPerson({
+      personId: 6,
+      name: 'usain bolt',
+      age: 30,
+      username: 'usainbolt123',
+      email: 'usain@bolt.com'
+    });
+
+    // subscribed action incrementX should have been called once on putPerson call
+    expect(x).to.equal(1);
+
+    testObj.putPersons([
+      {
+        personId: 7,
+        name: 'james bond',
+        age: 35,
+        username: 'jamesbond123',
+        email: 'james@bond.com'
+      },
+      {
+        personId: 8,
+        name: 'hermione granger',
+        age: 20,
+        username: 'hermione123',
+        email: 'hermione@granger.com'
+      }
+    ]);
+
+    // subscribed action incrementX should have been called once on putPersons call
+    expect(x).to.equal(2);
+
+    // test that typename specific unsubscribe works
+    testObj.unsubscribe("someId", "person");
+
+    testObj.putPerson({
+      personId: 9,
+      name: 'jane smith',
+      age: 30,
+      username: 'jane123',
+      email: 'jane@smith.com'
+    });
+
+    // unsubscribed action incrementX so x should not have incremented with putPerson call
+    expect(x).to.equal(2);
+
+    testObj.putPersons([
+      {
+        personId: 10,
+        name: 'tom smith',
+        age: 30,
+        username: 'tomsmith123',
+        email: 'tom@smith.com'
+      },
+      {
+        personId: 11,
+        name: 'sarah jones',
+        age: 25,
+        username: 'sjones123',
+        email: 'sarah@jones.com'
+      }
+    ]);
+
+    // unsubscribed action incrementX so x should not have incremented with putPersons call
+    expect(x).to.equal(2);
+
+    // re-subscribe incrementX
+    testObj.subscribe("someId", "person", incrementX);
+
+    testObj.putPerson({
+      personId: 12,
+      name: 'michelle jones',
+      age: 31,
+      username: 'michellejones123',
+      email: 'michelle@jones.com'
+    });
+    expect(x).to.equal(3);
+
+    testObj.putPersons([
+      {
+        personId: 13,
+        name: 'josh james',
+        age: 31,
+        username: 'joshjames123',
+        email: 'josh@james.com'
+      },
+      {
+        personId: 14,
+        name: 'kate smith',
+        age: 29,
+        username: 'katesmith123',
+        email: 'kate@smith.com'
+      }
+    ]);
+    expect(x).to.equal(4);
+
+    // check unsubcribe from all types works
+    testObj.unsubscribeAll("someId");
+
+    testObj.putPerson({
+      personId: 15,
+      name: 'jane jones',
+      age: 30,
+      username: 'janejone100',
+      email: 'jane@jones.com'
+    });
+    expect(x).to.equal(4);
+
+    testObj.putPersons([
+      {
+        personId: 16,
+        name: 'jim bond',
+        age: 45,
+        username: 'jimbond123',
+        email: 'jim@bond.com'
+      },
+      {
+        personId: 17,
+        name: 'charles smith',
+        age: 26,
+        username: 'charlessmith',
+        email: 'charles@smith.com'
+      }
+    ]);
+    expect(x).to.equal(4);
   });
 });
