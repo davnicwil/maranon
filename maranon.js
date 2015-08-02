@@ -43,8 +43,8 @@ var Maranon = function(schema) {
     _.each(type.getBy, _.partial(addGetsForTypeAndProperty, typeNameFnSuffixPlural, typeName));
 
     // add setters
-    thiz['put' + typeNameFnSuffix] = _.partial(putAndPublish, typeName);
-    thiz['put' + typeNameFnSuffixPlural] = _.partial(putsAndPublish, typeName);
+    thiz['put' + typeNameFnSuffix] = _.partial(putAndInvokeSubscribedActions, typeName);
+    thiz['put' + typeNameFnSuffixPlural] = _.partial(putsAndInvokeSubscribedActions, typeName);
   }
 
   function addIndexedGetForTypeAndProperty(typeNameFnSuffix, typeName, property) {
@@ -88,19 +88,19 @@ var Maranon = function(schema) {
     return entity;
   }
 
-  function putAndPublish(typeName, entity) {
+  function putAndInvokeSubscribedActions(typeName, entity) {
     var rtn = put(typeName, entity);
-    publishPut(typeName);
+    invokeSubscribedActions(typeName);
     return rtn;
   }
 
-  function putsAndPublish(typeName, entities) {
+  function putsAndInvokeSubscribedActions(typeName, entities) {
     var rtn = _.map(entities, _.partial(put, typeName));
-    publishPut(typeName);
+    invokeSubscribedActions(typeName);
     return rtn;
   }
 
-  function publishPut(typeName) {
+  function invokeSubscribedActions(typeName) {
     _.invoke(subscriptions[typeName], 'action');
   }
 
