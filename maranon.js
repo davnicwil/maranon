@@ -113,19 +113,30 @@ var Maranon = function(schema) {
     _.invoke(subscriptions[typeName], 'action');
   }
 
-  function subscribe(id, typeName, action) {
-    subscriptions[typeName].push({
-      id: id,
-      action: action
-    });
+  function subscribe(id) {
+    return {
+      toDo: function(action) {
+        return {
+          onUpdatesTo: function(typeName) {
+            subscriptions[typeName].push({
+              id: id,
+              action: action
+            });
+          }
+        };
+      }
+    };
   }
 
-  function unsubscribe(id, typeName) {
-    subscriptions[typeName] = _.reject(subscriptions[typeName], _.matchesProperty('id', id));
-  }
-
-  function unsubscribeAll(id) {
-    _.each(_.keys(subscriptions), _.partial(unsubscribe, id));
+  function unsubscribe(id) {
+    return {
+      fromUpdatesTo: function(typeName) {
+        subscriptions[typeName] = _.reject(subscriptions[typeName], _.matchesProperty('id', id));
+      },
+      fromAllUpdates: function() {
+        _.each(_.keys(subscriptions), unsubscribe(id).fromUpdatesTo);
+      }
+    };
   }
 
   function wipe() {
@@ -135,7 +146,6 @@ var Maranon = function(schema) {
 
   thiz.subscribe = subscribe;
   thiz.unsubscribe = unsubscribe;
-  thiz.unsubscribeAll = unsubscribeAll;
   thiz.wipe = wipe;
 
   init();

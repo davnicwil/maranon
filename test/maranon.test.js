@@ -289,13 +289,16 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(subsetTwoSortedById[1].name).to.equal('mike johnson');
   });
 
-  it('it should allow me to subsrcibe and unsubscribe actions to problem updates', function() {
+  it('it should allow me to subscribe and unsubscribe actions to problem updates', function() {
     var x = 0;
     function incrementX() {
       x += 1;
     }
 
-    testObj.subscribe("someId", "person", incrementX);
+    testObj
+      .subscribe("someId")
+      .toDo(incrementX)
+      .onUpdatesTo("person");
 
     expect(x).to.equal(0);
 
@@ -331,7 +334,9 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(x).to.equal(2);
 
     // test that typename specific unsubscribe works
-    testObj.unsubscribe("someId", "person");
+    testObj
+      .unsubscribe("someId")
+      .fromUpdatesTo("person");
 
     testObj.putPerson({
       personId: 9,
@@ -365,7 +370,10 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(x).to.equal(2);
 
     // re-subscribe incrementX
-    testObj.subscribe("someId", "person", incrementX);
+    testObj
+      .subscribe("someId")
+      .toDo(incrementX)
+      .onUpdatesTo("person");
 
     testObj.putPerson({
       personId: 12,
@@ -395,7 +403,9 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(x).to.equal(4);
 
     // check unsubcribe from all types works
-    testObj.unsubscribeAll("someId");
+    testObj
+      .unsubscribe("someId")
+      .fromAllUpdates();
 
     testObj.putPerson({
       personId: 15,
