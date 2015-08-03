@@ -60,11 +60,18 @@ var Maranon = function(schema) {
   }
 
   function gets(typeName, ids) {
-    return _.map(ids, _.partial(get, typeName));
+    return arrayResult(_.chain(ids)
+                        .map(_.partial(get, typeName))
+                        .compact()
+                        .value(), typeName);
   }
 
   function getAll(typeName) {
-    return _.values(caches[typeName].entities);
+    return arrayResult(_.values(caches[typeName].entities), typeName);
+  }
+
+  function arrayResult(arr, typeName) {
+    return arr.length === 0 && !caches[typeName].populated ? undefined : arr;
   }
 
   function getByIndexedProperty(typeName, property, value) {
@@ -77,10 +84,8 @@ var Maranon = function(schema) {
     return _.filter(caches[typeName].entities, _.matchesProperty(property, value));
   }
 
-  function put(typeName, entity) {
-    var cache = caches[typeName];
+  function put(cache, entity) {
     var id = entity[cache.idProperty];
-    cache.populated = true;
     cache.entities[id] = entity;
     _.forOwn(cache.indexes, function(index, indexName) {
       index[entity[indexName]] = id;
@@ -89,13 +94,17 @@ var Maranon = function(schema) {
   }
 
   function putAndInvokeSubscribedActions(typeName, entity) {
-    var rtn = put(typeName, entity);
+    var cache = caches[typeName];
+    var rtn = put(cache, entity);
+    cache.populated = true;
     invokeSubscribedActions(typeName);
     return rtn;
   }
 
   function putsAndInvokeSubscribedActions(typeName, entities) {
-    var rtn = _.map(entities, _.partial(put, typeName));
+    var cache = caches[typeName];
+    var rtn = _.map(entities, _.partial(put, cache));
+    cache.populated = true;
     invokeSubscribedActions(typeName);
     return rtn;
   }

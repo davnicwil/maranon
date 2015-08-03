@@ -84,6 +84,12 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(testObj.putRooms).to.be.a('function');
   });
 
+  it('it should return undefined from getter methods when the cache has never been populated and nothing is found', function() {
+    expect(testObj.getPerson(1)).to.be.undefined;
+    expect(testObj.getPersons([1,2,3])).to.be.undefined;
+    expect(testObj.getAllPersons()).to.be.undefined;
+  });
+
   it('it should store a person object', function() {
     testObj.putPerson({
       personId: 1,
