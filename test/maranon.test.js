@@ -88,6 +88,8 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(testObj.getPerson(1)).to.be.undefined;
     expect(testObj.getPersons([1,2,3])).to.be.undefined;
     expect(testObj.getAllPersons()).to.be.undefined;
+    expect(testObj.getPersonsByAge(30)).to.be.undefined;
+    expect(testObj.getPersonByEmail('doesnot@exist.com')).to.be.undefined;
   });
 
   it('it should store a person object', function() {

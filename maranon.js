@@ -55,23 +55,29 @@ var Maranon = function(schema) {
     thiz['get' + typeNameFnSuffixPlural + 'By' + _.capitalize(property)] = _.partial(getsByProperty, typeName, property);
   }
 
+  function getFromCache(cache, id) {
+    return cache.entities[id];
+  }
+
   function get(typeName, id) {
-    return caches[typeName].entities[id];
+    return getFromCache(caches[typeName], id);
   }
 
   function gets(typeName, ids) {
+    var cache = caches[typeName];
     return arrayResult(_.chain(ids)
-                        .map(_.partial(get, typeName))
+                        .map(_.partial(getFromCache, cache))
                         .compact()
-                        .value(), typeName);
+                        .value(), cache);
   }
 
   function getAll(typeName) {
-    return arrayResult(_.values(caches[typeName].entities), typeName);
+    var cache = caches[typeName];
+    return arrayResult(_.values(cache.entities), cache);
   }
 
-  function arrayResult(arr, typeName) {
-    return arr.length === 0 && !caches[typeName].populated ? undefined : arr;
+  function arrayResult(arr, cache) {
+    return arr.length === 0 && !cache.populated ? undefined : arr;
   }
 
   function getByIndexedProperty(typeName, property, value) {
@@ -81,7 +87,14 @@ var Maranon = function(schema) {
   }
 
   function getsByProperty(typeName, property, value) {
-    return _.filter(caches[typeName].entities, _.matchesProperty(property, value));
+    var cache = caches[typeName];
+    return arrayResult(_.filter(cache.entities, looselyEquals(property, value)), cache);
+  }
+
+  function looselyEquals(property, value) {
+    return function(obj) {
+      return obj[property] == value;
+    };
   }
 
   function put(cache, entity) {
@@ -131,7 +144,7 @@ var Maranon = function(schema) {
   function unsubscribe(id) {
     return {
       fromUpdatesTo: function(typeName) {
-        subscriptions[typeName] = _.reject(subscriptions[typeName], _.matchesProperty('id', id));
+        subscriptions[typeName] = _.reject(subscriptions[typeName], looselyEquals('id', id));
       },
       fromAllUpdates: function() {
         _.each(_.keys(subscriptions), unsubscribe(id).fromUpdatesTo);
