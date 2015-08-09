@@ -2,17 +2,51 @@ var _ = require('lodash');
 
 var Maranon = function(schema) {
   var caches = {};
+  var manyToManys = {};
   var subscriptions = {};
   var thiz = {};
 
   function init() {
     _.forOwn(schema, initTypeCache);
+    _.forOwn(schema.manyToMany, _.partial(initManyToMany, schema));
   }
 
   function initTypeCache(type, typeName) {
     caches[typeName] = Cache(type);
     subscriptions[typeName] = [];
     addGettersAndSettersFor(type, typeName);
+  }
+
+  function initManyToMany(schema, manyToMany, manyToManyName) {
+    manyToManys[manyToManyName] = new ManyToMany();
+    addManyToManyGettersAndSetters(schema, manyToMany, manyToManyName);
+  }
+
+  function addManyToManyGettersAndSetters(schema, manyToMany, manyToManyName) {
+    var aTypeName = manyToMany.entityA;
+    var bTypeName = manyToMany.entityB;
+    var aType = schema(aTypeName);
+    var bType = schema(bTypeName);
+    var aTypeNameCapitalized = _.captialize(aTypeName);
+    var bTypeNameCapitalized = _.captialize(bTypeName);
+    var aPluralSuffix = _.captialize(pluralise(aType, aTypeName));
+    var bPluralSuffix = _.captialize(pluralise(bType, bTypeName));
+
+    thiz['get' + aTypeNameCapitalized + bPluralSuffix] = _.partial(getsManyToMany, manyToManyName, aTypeName, bTypeName);
+    thiz['get' + bTypeNameCapitalized + aPluralSuffix] = _.partial(getsManyToMany, manyToManyName, bTypeName, aTypeName);
+
+    thiz['put' + aTypeNameCapitalized + bPluralSuffix] = _.partial(putsManyToMany, manyToManyName, aTypeName, bTypeName);
+    thiz['put' + bTypeNameCapitalized + aPluralSuffix] = _.partial(putsManyToMany, manyToManyName, bTypeName, aTypeName);
+  }
+
+  function initHasManyRelations(schema, type, typeName) {
+    hasManyRelations[typeName] = {};
+    hasManyTypeNames.forEach(function(hasManyTypeName) {
+      hasManyRelations[typeName][hasManyTypeName] = {};
+      var getSetSuffix = _.capitalize(typeName) + pluralise(schema[hasManyTypeName], _.capitalize(hasManyTypeName));
+      thiz['get' + getSetSuffix] = _.partial(getsHasMany, typeName, hasManyTypeName);
+      thiz['put' + getSetSuffix] = x;
+    });
   }
 
   function Cache(type) {
@@ -27,9 +61,20 @@ var Maranon = function(schema) {
     return cache;
   }
 
+  function ManyToMany() {
+    var manyToMany = {};
+    manyToMany.populated = false;
+    manyToMany.pairs = [];
+    return manyToMany;
+  }
+
+  function pluralise(type, typeName) {
+    return typeName + (type.pluralSuffix || 's');
+  }
+
   function addGettersAndSettersFor(type, typeName) {
     var typeNameFnSuffix = _.capitalize(typeName);
-    var typeNameFnSuffixPlural = typeNameFnSuffix + (type.pluralSuffix || 's');
+    var typeNameFnSuffixPlural = pluralise(type, typeNameFnSuffix);
 
     // add getters for specified id property
     thiz['get' + typeNameFnSuffix] = _.partial(get, typeName);
@@ -42,6 +87,9 @@ var Maranon = function(schema) {
     // add getters for specified getBy properties (return array of 0 or more elements)
     _.each(type.getBy, _.partial(addGetsForTypeAndProperty, typeNameFnSuffixPlural, typeName));
 
+    // add getters for specified one-to-many relations
+    _.each(type.hasMany, _.partial(addGetsForTypeHasManyRelation, typeNameFnSuffix, typeName));
+
     // add setters
     thiz['put' + typeNameFnSuffix] = _.partial(putAndInvokeSubscribedActions, typeName);
     thiz['put' + typeNameFnSuffixPlural] = _.partial(putsAndInvokeSubscribedActions, typeName);
@@ -53,6 +101,10 @@ var Maranon = function(schema) {
 
   function addGetsForTypeAndProperty(typeNameFnSuffixPlural, typeName, property) {
     thiz['get' + typeNameFnSuffixPlural + 'By' + _.capitalize(property)] = _.partial(getsByProperty, typeName, property);
+  }
+
+  function addGetsForTypeHasManyRelation(typeNameFnSuffix, typeName, hasManyEntity) {
+    thiz['get' + typeNameFnSuffix + 'By' + _.capitalize(property)] = _.partial(getByIndexedProperty, typeName, property);
   }
 
   function getFromCache(cache, id) {
@@ -89,6 +141,30 @@ var Maranon = function(schema) {
   function getsByProperty(typeName, property, value) {
     var cache = caches[typeName];
     return arrayResult(_.filter(cache.entities, looselyEquals(property, value)), cache);
+  }
+
+  function getsManyToMany(manyToManyName, fromTypeName, toTypeName, id) {
+    var ids = _.chain(manyToManys[manyToManyName].pairs)
+                  .filter(looselyEquals(fromTypeName, id))
+                  .pluck(toTypeName)
+                  .value();
+    return gets(toTypeName, ids);
+  }
+
+  function putsManyToMany(manyToManyName, fromTypeName, toTypeName, toTypeIdProperty, fromId, toObjects) {
+    var expiredPairsRemoved = _.filter(manyToManys[manyToManyName].pairs, function(pair) {
+      return pair[fromTypeName] != id;
+    });
+    var newPairs = _.chain(toObjects)
+                    .pluck(toTypeIdProperty)
+                    .map(function(toId) {
+                      var newPair = {};
+                      newPair[fromTypeName] = fromId;
+                      newPair[toTypeName] = toId;
+                      return newPair;
+                    })
+                    .value();
+    manyToManys[manyToManyName].pairs = expiredPairsRemoved.concat(newPairs);
   }
 
   function looselyEquals(property, value) {
@@ -154,6 +230,7 @@ var Maranon = function(schema) {
 
   function wipe() {
     caches = {};
+    hasManyRelations = {};
     subscriptions = {};
   }
 
