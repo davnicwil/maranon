@@ -12,6 +12,29 @@ var schema = {
   }, // house:room 1:n
   "room" : {
     "idProperty": "roomId"
+  },
+  "wallpaper" : {
+    "idProperty" : "wallpaperId"
+  },
+  "flooring" : {
+    "idProperty" : "flooringId"
+  },
+  "lighting" : {
+    "idProperty" : "lightingId"
+  },
+  "manyToMany": {
+    "roomWallpaper" : {
+      entityA: 'room',
+      entityB: 'wallpaper'
+    },
+    "roomFlooring" : {
+      entityA: 'room',
+      entityB: 'flooring'
+    },
+    "roomLighting" : {
+      entityA: 'room',
+      entityB: 'lighting'
+    }
   }
 };
 
@@ -82,6 +105,32 @@ describe('When I build a Maranon cache with a schema containing person, house an
 
     expect(testObj).to.have.property('putRooms');
     expect(testObj.putRooms).to.be.a('function');
+  });
+
+  it('it should provide getters and setters for the specified many to many relationships', function () {
+    expect(testObj).to.have.property('getRoomWallpapers');
+    expect(testObj.getRoomWallpapers).to.be.a('function');
+
+    expect(testObj).to.have.property('putRoomWallpapers');
+    expect(testObj.putRoomWallpapers).to.be.a('function');
+
+    expect(testObj).to.have.property('getWallpaperRooms');
+    expect(testObj.getWallpaperRooms).to.be.a('function');
+
+    expect(testObj).to.have.property('putWallpaperRooms');
+    expect(testObj.putWallpaperRooms).to.be.a('function');
+
+    expect(testObj).to.have.property('getRoomFloorings');
+    expect(testObj.getRoomFloorings).to.be.a('function');
+
+    expect(testObj).to.have.property('putRoomFloorings');
+    expect(testObj.putRoomFloorings).to.be.a('function');
+
+    expect(testObj).to.have.property('getFlooringRooms');
+    expect(testObj.getFlooringRooms).to.be.a('function');
+
+    expect(testObj).to.have.property('putFlooringRooms');
+    expect(testObj.putFlooringRooms).to.be.a('function');
   });
 
   it('it should return undefined from getter methods when the cache has never been populated and nothing is found', function() {
@@ -289,6 +338,109 @@ describe('When I build a Maranon cache with a schema containing person, house an
 
     expect(subsetTwoSortedById[0].name).to.equal('jack white');
     expect(subsetTwoSortedById[1].name).to.equal('mike johnson');
+  });
+
+  it('it should allow many to many relationships to be cached and retrieved', function() {
+    var rooms = [{
+      roomId: 1001,
+      name: 'lounge',
+      houseId: 100
+    },
+    {
+      roomId: 1002,
+      name: 'bathroom',
+      houseId: 100
+    },
+    {
+      roomId: 1003,
+      name: 'bedroom',
+      houseId: 100
+    }];
+
+    var wallpapers = [{
+      wallpaperId: 1,
+      type: 'flowers'
+    },
+    {
+      wallpaperId: 2,
+      type: 'stripes'
+    },
+    {
+      wallpaperId: 3,
+      type: 'circles'
+    },
+    {
+      wallpaperId: 4,
+      type: 'plain'
+    }];
+
+    var floorings = [{
+      flooringId: 1,
+      type: 'wood'
+    },
+    {
+      flooringId: 2,
+      type: 'tiles'
+    },
+    {
+      flooringId: 3,
+      type: 'carpet'
+    },
+    {
+      flooringId: 4,
+      type: 'laminate'
+    }];
+
+    var lightings = [{
+      lightingId: 1,
+      type: "spotlights"
+    },
+    {
+      lightingId: 2,
+      type: "lava lamp"
+    }];
+
+    testObj.putRooms(rooms);
+    testObj.putWallpapers(wallpapers);
+    testObj.putFloorings(floorings);
+    testObj.putLightings(lightings);
+
+    testObj.putRoomWallpapers(1001, [ { wallpaperId: 1 }, { wallpaperId: 2} ]); // lounge has flowers and stripes wallpaper
+    var loungeWallpapers = testObj.getRoomWallpapers(1001).sort(function(a, b) { return a.wallpaperId - b.wallpaperId; });
+    expect(loungeWallpapers[0].type).to.equal('flowers');
+    expect(loungeWallpapers[1].type).to.equal('stripes');
+    expect(testObj.getWallpaperRooms(1)[0].name).to.equal('lounge');
+    expect(testObj.getWallpaperRooms(2)[0].name).to.equal('lounge');
+
+    testObj.putWallpaperRooms(3, [ { roomId: 1002 }, { roomId: 1003 }]); // circle wallpaper is used in bathroom and bedroom
+    var circleWallpaperRooms = testObj.getWallpaperRooms(3).sort(function(a, b) { return a.roomId - b.roomId; });
+    expect(circleWallpaperRooms[0].name).to.equal('bathroom');
+    expect(circleWallpaperRooms[1].name).to.equal('bedroom');
+    expect(testObj.getRoomWallpapers(1002)[0].type).to.equal('circles');
+    expect(testObj.getRoomWallpapers(1003)[0].type).to.equal('circles');
+
+    testObj.putRoomFloorings(1002, [ { flooringId: 1 }, { flooringId: 2} ]); // bathroom has wood and and tiles flooring
+    var bathroomFloorings = testObj.getRoomFloorings(1002).sort(function(a, b) { return a.flooringId - b.flooringId; });
+    expect(bathroomFloorings[0].type).to.equal('wood');
+    expect(bathroomFloorings[1].type).to.equal('tiles');
+    expect(testObj.getFlooringRooms(1)[0].name).to.equal('bathroom');
+    expect(testObj.getFlooringRooms(2)[0].name).to.equal('bathroom');
+
+    testObj.putFlooringRooms(3, [ { roomId: 1001 }, { roomId: 1003 }]); // carpet flooring is used in lounge and bedroom
+    var carpetFlooringRooms = testObj.getFlooringRooms(3).sort(function(a, b) { return a.roomId - b.roomId; });
+    expect(carpetFlooringRooms[0].name).to.equal('lounge');
+    expect(carpetFlooringRooms[1].name).to.equal('bedroom');
+    expect(testObj.getRoomFloorings(1001)[0].type).to.equal('carpet');
+    expect(testObj.getRoomFloorings(1003)[0].type).to.equal('carpet');
+
+    expect(testObj.getRoomWallpapers(1000)).to.be.empty; // no wallpapers cached for kitchen, but room-wallpaper relation populated, so should return empty array
+    expect(testObj.getWallpaperRooms(4)).to.be.empty; // no rooms cached for plain wallpaper, but room-wallpaper relation populated, so should return empty array
+
+    expect(testObj.getRoomFloorings(1000)).to.be.empty; // no floorings cached for kitchen, but room-flooring relation populated,  so should return empty array
+    expect(testObj.getFlooringRooms(4)).to.be.empty; // no rooms cached for laminate flooring, but room-flooring relation populated, so should return empty array
+
+    expect(testObj.getRoomLightings(1001)).to.be.undefined; // no lightings cached for lounge, but room-lighting relation not populated, so should return undefined
+    expect(testObj.getLightingRooms(1)).to.be.undefined; // no rooms cached for spotlights, but room-lighting relation not populated, so should return undefined
   });
 
   it('it should allow me to subscribe and unsubscribe actions to problem updates', function() {

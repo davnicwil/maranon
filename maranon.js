@@ -25,18 +25,18 @@ var Maranon = function(schema) {
   function addManyToManyGettersAndSetters(schema, manyToMany, manyToManyName) {
     var aTypeName = manyToMany.entityA;
     var bTypeName = manyToMany.entityB;
-    var aType = schema(aTypeName);
-    var bType = schema(bTypeName);
-    var aTypeNameCapitalized = _.captialize(aTypeName);
-    var bTypeNameCapitalized = _.captialize(bTypeName);
-    var aPluralSuffix = _.captialize(pluralise(aType, aTypeName));
-    var bPluralSuffix = _.captialize(pluralise(bType, bTypeName));
+    var aType = schema[aTypeName];
+    var bType = schema[bTypeName];
+    var aTypeNameCapitalized = _.capitalize(aTypeName);
+    var bTypeNameCapitalized = _.capitalize(bTypeName);
+    var aPluralSuffix = _.capitalize(pluralise(aType, aTypeName));
+    var bPluralSuffix = _.capitalize(pluralise(bType, bTypeName));
 
     thiz['get' + aTypeNameCapitalized + bPluralSuffix] = _.partial(getsManyToMany, manyToManyName, aTypeName, bTypeName);
     thiz['get' + bTypeNameCapitalized + aPluralSuffix] = _.partial(getsManyToMany, manyToManyName, bTypeName, aTypeName);
 
-    thiz['put' + aTypeNameCapitalized + bPluralSuffix] = _.partial(putsManyToMany, manyToManyName, aTypeName, bTypeName);
-    thiz['put' + bTypeNameCapitalized + aPluralSuffix] = _.partial(putsManyToMany, manyToManyName, bTypeName, aTypeName);
+    thiz['put' + aTypeNameCapitalized + bPluralSuffix] = _.partial(putsManyToMany, manyToManyName, aTypeName, bTypeName, bType.idProperty);
+    thiz['put' + bTypeNameCapitalized + aPluralSuffix] = _.partial(putsManyToMany, manyToManyName, bTypeName, aTypeName, aType.idProperty);
   }
 
   function initHasManyRelations(schema, type, typeName) {
@@ -144,27 +144,31 @@ var Maranon = function(schema) {
   }
 
   function getsManyToMany(manyToManyName, fromTypeName, toTypeName, id) {
-    var ids = _.chain(manyToManys[manyToManyName].pairs)
+    var manyToMany = manyToManys[manyToManyName];
+    var ids = _.chain(manyToMany.pairs)
                   .filter(looselyEquals(fromTypeName, id))
                   .pluck(toTypeName)
                   .value();
+    if(ids.length === 0) {
+      if(manyToMany.populated) return ids;
+      return;
+    }
     return gets(toTypeName, ids);
   }
 
+  function makeManyToManyPair(fromKey, toKey, fromValue, toValue) {
+    var newPair = {};
+    newPair[fromKey] = fromValue;
+    newPair[toKey] = toValue;
+    return newPair;
+  }
+
   function putsManyToMany(manyToManyName, fromTypeName, toTypeName, toTypeIdProperty, fromId, toObjects) {
-    var expiredPairsRemoved = _.filter(manyToManys[manyToManyName].pairs, function(pair) {
-      return pair[fromTypeName] != id;
-    });
     var newPairs = _.chain(toObjects)
                     .pluck(toTypeIdProperty)
-                    .map(function(toId) {
-                      var newPair = {};
-                      newPair[fromTypeName] = fromId;
-                      newPair[toTypeName] = toId;
-                      return newPair;
-                    })
+                    .map(_.partial(makeManyToManyPair, fromTypeName, toTypeName, fromId))
                     .value();
-    manyToManys[manyToManyName].pairs = expiredPairsRemoved.concat(newPairs);
+    manyToManys[manyToManyName].pairs = newPairs.concat(_.reject(manyToManys[manyToManyName].pairs, looselyEquals(fromTypeName, fromId)));
   }
 
   function looselyEquals(property, value) {
