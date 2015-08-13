@@ -1,7 +1,7 @@
 var _ = require('lodash');
 
-var Maranon = function(schema, cacheBackupPeriod, disableStore) {
-  var store = disableStore ? { enabled: false } : require('store');
+var Maranon = function(schema, enableStore, cacheBackupPeriod) {
+  var store = enableStore ? require('store') : { enabled: false };
 
   var ONE_MINUTE = 60000;
 

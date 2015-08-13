@@ -48,7 +48,7 @@ var schema = {
 
 describe('When I build a Maranon cache with a schema defining my model', function() {
 
-  var testObj = Maranon(schema, null, true);
+  var testObj = Maranon(schema);
 
   it('should provide basic getters and setters for the person cache', function () {
     expect(testObj).to.have.property('getPerson');
