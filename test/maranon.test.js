@@ -35,13 +35,18 @@ var schema = {
       entityA: 'room',
       entityB: 'lighting'
     }
+  },
+  "properties" : {
+    a : {},
+    b : {},
+    c : { doNotWipe: true },
+    d : { doNotWipe: true },
   }
 };
 
+describe('When I build a Maranon cache with a schema defining my model', function() {
 
-describe('When I build a Maranon cache with a schema containing person, house and room', function() {
-
-  var testObj = Maranon(schema);
+  var testObj = Maranon(schema, null, true);
 
   it('should provide basic getters and setters for the person cache', function () {
     expect(testObj).to.have.property('getPerson');
@@ -107,6 +112,57 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(testObj.putRooms).to.be.a('function');
   });
 
+  it('it should provide basic getters and setters for the wallpaper cache', function () {
+    expect(testObj).to.have.property('getWallpaper');
+    expect(testObj.getWallpaper).to.be.a('function');
+
+    expect(testObj).to.have.property('getWallpapers');
+    expect(testObj.getWallpapers).to.be.a('function');
+
+    expect(testObj).to.have.property('getAllWallpapers');
+    expect(testObj.getAllWallpapers).to.be.a('function');
+
+    expect(testObj).to.have.property('putWallpaper');
+    expect(testObj.putWallpaper).to.be.a('function');
+
+    expect(testObj).to.have.property('putWallpapers');
+    expect(testObj.putWallpapers).to.be.a('function');
+  });
+
+  it('it should provide basic getters and setters for the flooring cache', function () {
+    expect(testObj).to.have.property('getFlooring');
+    expect(testObj.getFlooring).to.be.a('function');
+
+    expect(testObj).to.have.property('getFloorings');
+    expect(testObj.getFloorings).to.be.a('function');
+
+    expect(testObj).to.have.property('getAllFloorings');
+    expect(testObj.getAllFloorings).to.be.a('function');
+
+    expect(testObj).to.have.property('putFlooring');
+    expect(testObj.putFlooring).to.be.a('function');
+
+    expect(testObj).to.have.property('putFloorings');
+    expect(testObj.putFloorings).to.be.a('function');
+  });
+
+  it('it should provide basic getters and setters for the lighting cache', function () {
+    expect(testObj).to.have.property('getLighting');
+    expect(testObj.getLighting).to.be.a('function');
+
+    expect(testObj).to.have.property('getLightings');
+    expect(testObj.getLightings).to.be.a('function');
+
+    expect(testObj).to.have.property('getAllLightings');
+    expect(testObj.getAllLightings).to.be.a('function');
+
+    expect(testObj).to.have.property('putLighting');
+    expect(testObj.putLighting).to.be.a('function');
+
+    expect(testObj).to.have.property('putLightings');
+    expect(testObj.putLightings).to.be.a('function');
+  });
+
   it('it should provide getters and setters for the specified many to many relationships', function () {
     expect(testObj).to.have.property('getRoomWallpapers');
     expect(testObj.getRoomWallpapers).to.be.a('function');
@@ -131,6 +187,44 @@ describe('When I build a Maranon cache with a schema containing person, house an
 
     expect(testObj).to.have.property('putFlooringRooms');
     expect(testObj.putFlooringRooms).to.be.a('function');
+  });
+
+  it('it should provide get, set, and delete functions for all the specified properties', function() {
+    expect(testObj).to.have.property('getAProperty');
+    expect(testObj.getAProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('getBProperty');
+    expect(testObj.getBProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('getCProperty');
+    expect(testObj.getCProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('getDProperty');
+    expect(testObj.getDProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('putAProperty');
+    expect(testObj.putAProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('putBProperty');
+    expect(testObj.putBProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('putCProperty');
+    expect(testObj.putCProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('putDProperty');
+    expect(testObj.putDProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('deleteAProperty');
+    expect(testObj.deleteAProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('deleteBProperty');
+    expect(testObj.deleteBProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('deleteCProperty');
+    expect(testObj.deleteCProperty).to.be.a('function');
+
+    expect(testObj).to.have.property('deleteDProperty');
+    expect(testObj.deleteDProperty).to.be.a('function');
   });
 
   it('it should return undefined from getter methods when the cache has never been populated and nothing is found', function() {
@@ -443,6 +537,31 @@ describe('When I build a Maranon cache with a schema containing person, house an
     expect(testObj.getLightingRooms(1)).to.be.undefined; // no rooms cached for spotlights, but room-lighting relation not populated, so should return undefined
   });
 
+  it('it should allow me to store properties', function() {
+    testObj.putAProperty('hello world');
+    testObj.putBProperty(1);
+    testObj.putCProperty(false);
+    testObj.putDProperty({ a: 1000, b: true });
+
+    expect(testObj.getAProperty()).to.equal('hello world');
+    expect(testObj.getBProperty()).to.equal(1);
+    expect(testObj.getCProperty()).to.equal(false);
+    expect(testObj.getDProperty().a).to.equal(1000);
+    expect(testObj.getDProperty().b).to.equal(true);
+  });
+
+  it('it should allow me to manually delete properties', function() {
+    testObj.deleteAProperty();
+    testObj.deleteBProperty();
+    testObj.deleteCProperty();
+    testObj.deleteDProperty();
+
+    expect(testObj.getAProperty()).to.be.undefined;
+    expect(testObj.getBProperty()).to.be.undefined;
+    expect(testObj.getCProperty()).to.be.undefined;
+    expect(testObj.getDProperty()).to.be.undefined;
+  });
+
   it('it should allow me to subscribe and unsubscribe actions to problem updates', function() {
     var x = 0;
     function incrementX() {
@@ -587,5 +706,50 @@ describe('When I build a Maranon cache with a schema containing person, house an
       }
     ]);
     expect(x).to.equal(4);
+  });
+
+  it('it should allow me to subscribe and unsubscribe actions to property updates', function() {
+    var x = 0;
+    function incrementX() {
+      x += 1;
+    }
+
+    testObj
+      .subscribe("someId")
+      .toDo(incrementX)
+      .onUpdatesToProperty("a");
+
+    expect(x).to.equal(0);
+
+    testObj.putAProperty('hello 1');
+    expect(x).to.equal(1);
+
+    testObj.putAProperty(8);
+    expect(x).to.equal(2);
+
+    // test that property specific unsubscribe works
+    testObj
+      .unsubscribe("someId")
+      .fromUpdatesToProperty("a");
+
+    testObj.putAProperty(true);
+    expect(x).to.equal(2);
+
+    // re-subscribe incrementX
+    testObj
+      .subscribe("someId")
+      .toDo(incrementX)
+      .onUpdatesToProperty("a");
+
+    testObj.putAProperty('new value');
+    expect(x).to.equal(3);
+
+    // check unsubcribe from all types works
+    testObj
+      .unsubscribe("someId")
+      .fromAllUpdates();
+
+    testObj.putAProperty({ a: 1, b: true });
+    expect(x).to.equal(3);
   });
 });

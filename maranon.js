@@ -1,25 +1,108 @@
 var _ = require('lodash');
 
-var Maranon = function(schema) {
+var Maranon = function(schema, cacheBackupPeriod, disableStore) {
+  var store = disableStore ? { enabled: false } : require('store');
+
+  var ONE_MINUTE = 60000;
+
   var caches = {};
   var manyToManys = {};
+  var properties = {};
   var subscriptions = {};
   var thiz = {};
 
   function init() {
     _.forOwn(schema, initTypeCache);
     _.forOwn(schema.manyToMany, _.partial(initManyToMany, schema));
+    _.forOwn(schema.properties, initPropertyCache);
+    backupEvery(cacheBackupPeriod || ONE_MINUTE);
   }
 
   function initTypeCache(type, typeName) {
-    caches[typeName] = Cache(type);
+    caches[typeName] = getBackedUpCache(typeName) || Cache(type);
     subscriptions[typeName] = [];
     addGettersAndSettersFor(type, typeName);
   }
 
+  function getCacheBackupKey(typeName) {
+    return typeName + '_cache';
+  }
+
+  function getManyToManyBackupKey(manyToManyName) {
+    return manyToManyName + '_manyToMany';
+  }
+
+  function getPropertyBackupKey(propertyName) {
+    return propertyName + '_property';
+  }
+
+  function getBackedUpCache(typeName) {
+    if(!store.enabled) return;
+    var backup = store.get(getCacheBackupKey(typeName));
+    if(backup) return backup;
+  }
+
+  function getBackedUpManyToMany(manyToManyName) {
+    if(!store.enabled) return;
+    var backup = store.get(getManyToManyBackupKey(manyToManyName));
+    if(backup) return backup;
+  }
+
+  function getBackedUpProperty(propertyName) {
+    if(!store.enabled) return;
+    var backup = store.get(getPropertyBackupKey(propertyName));
+    if(backup) return backup;
+  }
+
+  function backupEvery(millis) {
+    store.enabled && setInterval(doBackup, millis);
+  }
+
+  function doBackup() {
+    _.forOwn(caches, backupCache);
+    _.forOwn(manyToManys, backupManyToMany);
+  }
+
+  function backupCache(cache, typeName) {
+    store.set(getCacheBackupKey(typeName), cache);
+  }
+
+  function backupManyToMany(manyToMany, manyToManyName) {
+    store.set(getManyToManyBackupKey(manyToManyName), manyToMany);
+  }
+
   function initManyToMany(schema, manyToMany, manyToManyName) {
-    manyToManys[manyToManyName] = new ManyToMany();
+    manyToManys[manyToManyName] = getBackedUpManyToMany() || new ManyToMany();
     addManyToManyGettersAndSetters(schema, manyToMany, manyToManyName);
+  }
+
+  function initPropertyCache(property, propertyKey) {
+    properties[propertyKey] = getBackedUpProperty();
+    subscriptions[getPropertySubscriptionKey(propertyKey)] = [];
+    var fnSuffix =  _.capitalize(propertyKey) + 'Property';
+
+    thiz['get' + fnSuffix] = _.partial(getProperty, propertyKey);
+    thiz['put' + fnSuffix] = _.partial(putProperty, !property.doNotPersist, propertyKey);
+    thiz['delete' + fnSuffix] = _.partial(deleteProperty, !property.doNotPersist, propertyKey);
+  }
+
+  function getProperty(key) {
+    return properties[key];
+  }
+
+  function putProperty(persist, key, value) {
+    properties[key] = value;
+    if(store.enabled && persist) store.set(getPropertyBackupKey(key), value);
+    invokeSubscribedActions(getPropertySubscriptionKey(key));
+  }
+
+  function getPropertySubscriptionKey(propertyName) {
+    return propertyName + '_property';
+  }
+
+  function deleteProperty(persisted, key) {
+    delete properties[key];
+    if(store.enabled && persisted) store.remove(getPropertyBackupKey(key));
   }
 
   function addManyToManyGettersAndSetters(schema, manyToMany, manyToManyName) {
@@ -215,6 +298,12 @@ var Maranon = function(schema) {
               id: id,
               action: action
             });
+          },
+          onUpdatesToProperty: function(propertyName) {
+            subscriptions[getPropertySubscriptionKey(propertyName)].push({
+              id: id,
+              action: action
+            });
           }
         };
       }
@@ -226,16 +315,49 @@ var Maranon = function(schema) {
       fromUpdatesTo: function(typeName) {
         subscriptions[typeName] = _.reject(subscriptions[typeName], looselyEquals('id', id));
       },
+      fromUpdatesToProperty: function(propertyName) {
+        subscriptions[getPropertySubscriptionKey(propertyName)] = _.reject(subscriptions[getPropertySubscriptionKey(propertyName)], looselyEquals('id', id));
+      },
       fromAllUpdates: function() {
         _.each(_.keys(subscriptions), unsubscribe(id).fromUpdatesTo);
+        _.each(_.keys(subscriptions), unsubscribe(id).fromUpdatesToProperty);
       }
     };
   }
 
   function wipe() {
+    wipeCaches();
+    wipeManyToManys();
+    wipeSubscriptions();
+    wipeProperties();
+  }
+
+  function wipeCaches() {
+    _.forOwn(caches, wipeCacheBackup);
     caches = {};
-    hasManyRelations = {};
+  }
+
+  function wipeCacheBackup(cache, typeName) {
+    store.remove(getCacheBackupKey(typeName));
+  }
+
+  function wipeManyToManys() {
+    _.forOwn(manyToManys, wipeManyToManyBackup);
+    manyToManys = {};
+  }
+
+  function wipeManyToManyBackup(manyToMany, manyToManyName) {
+    store.remove(getManyToManyBackupKey(manyToManyName));
+  }
+
+  function wipeSubscriptions() {
     subscriptions = {};
+  }
+
+  function wipeProperty(property, propertyName) {
+    if(property.doNotWipe) return;
+    delete properties[propertyName];
+    if(!property.doNotPersist) store.remove(getPropertyBackupKey(propertyName));
   }
 
   thiz.subscribe = subscribe;
