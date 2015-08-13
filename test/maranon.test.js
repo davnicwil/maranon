@@ -2,25 +2,27 @@ var expect = require("chai").expect;
 var Maranon = require("../maranon.js");
 
 var schema = {
-  "person" : {
-    "idProperty": "personId",
-    "indexOn": ["username", "email"],
-    "getBy": ["age"]
-  }, // person:house 1:n
-  "house" : {
-    "idProperty": "houseId"
-  }, // house:room 1:n
-  "room" : {
-    "idProperty": "roomId"
-  },
-  "wallpaper" : {
-    "idProperty" : "wallpaperId"
-  },
-  "flooring" : {
-    "idProperty" : "flooringId"
-  },
-  "lighting" : {
-    "idProperty" : "lightingId"
+  "model" : {
+    "person" : {
+      "idProperty": "personId",
+      "indexOn": ["username", "email"],
+      "getBy": ["age"]
+    }, // person:house 1:n
+    "house" : {
+      "idProperty": "houseId"
+    }, // house:room 1:n
+    "room" : {
+      "idProperty": "roomId"
+    },
+    "wallpaper" : {
+      "idProperty" : "wallpaperId"
+    },
+    "flooring" : {
+      "idProperty" : "flooringId"
+    },
+    "lighting" : {
+      "idProperty" : "lightingId"
+    },
   },
   "manyToMany": {
     "roomWallpaper" : {

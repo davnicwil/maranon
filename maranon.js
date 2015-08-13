@@ -12,7 +12,7 @@ var Maranon = function(schema, cacheBackupPeriod, disableStore) {
   var thiz = {};
 
   function init() {
-    _.forOwn(schema, initTypeCache);
+    _.forOwn(schema.model, initTypeCache);
     _.forOwn(schema.manyToMany, _.partial(initManyToMany, schema));
     _.forOwn(schema.properties, initPropertyCache);
     backupEvery(cacheBackupPeriod || ONE_MINUTE);
@@ -108,8 +108,8 @@ var Maranon = function(schema, cacheBackupPeriod, disableStore) {
   function addManyToManyGettersAndSetters(schema, manyToMany, manyToManyName) {
     var aTypeName = manyToMany.entityA;
     var bTypeName = manyToMany.entityB;
-    var aType = schema[aTypeName];
-    var bType = schema[bTypeName];
+    var aType = schema.model[aTypeName];
+    var bType = schema.model[bTypeName];
     var aTypeNameCapitalized = _.capitalize(aTypeName);
     var bTypeNameCapitalized = _.capitalize(bTypeName);
     var aPluralSuffix = _.capitalize(pluralise(aType, aTypeName));
