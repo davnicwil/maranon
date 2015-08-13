@@ -76,14 +76,14 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     addManyToManyGettersAndSetters(schema, manyToMany, manyToManyName);
   }
 
-  function initPropertyCache(property, propertyKey) {
-    properties[propertyKey] = getBackedUpProperty();
-    subscriptions[getPropertySubscriptionKey(propertyKey)] = [];
-    var fnSuffix =  _.capitalize(propertyKey) + 'Property';
+  function initPropertyCache(property, propertyName) {
+    properties[propertyName] = getBackedUpProperty(propertyName);
+    subscriptions[getPropertySubscriptionKey(propertyName)] = [];
+    var fnSuffix =  _.capitalize(propertyName) + 'Property';
 
-    thiz['get' + fnSuffix] = _.partial(getProperty, propertyKey);
-    thiz['put' + fnSuffix] = _.partial(putProperty, !property.doNotPersist, propertyKey);
-    thiz['delete' + fnSuffix] = _.partial(deleteProperty, !property.doNotPersist, propertyKey);
+    thiz['get' + fnSuffix] = _.partial(getProperty, propertyName);
+    thiz['put' + fnSuffix] = _.partial(putProperty, !property.doNotPersist, propertyName);
+    thiz['delete' + fnSuffix] = _.partial(deleteProperty, !property.doNotPersist, propertyName);
   }
 
   function getProperty(key) {
