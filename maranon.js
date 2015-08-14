@@ -1,4 +1,5 @@
 var _ = require('lodash');
+var CookieManager = require('./storage/CookieManager.js');
 
 var Maranon = function(schema, enableStore, cacheBackupPeriod) {
   var store = enableStore ? require('store') : { enabled: false };
@@ -48,8 +49,9 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     if(backup) return backup;
   }
 
-  function getBackedUpProperty(propertyName) {
+  function getBackedUpProperty(property, propertyName) {
     if(!store.enabled) return;
+    if(property.cookieBacked) return CookieManager.read(propertyName);
     var backup = store.get(getPropertyBackupKey(propertyName));
     if(backup) return backup;
   }
@@ -77,12 +79,12 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
   }
 
   function initPropertyCache(property, propertyName) {
-    properties[propertyName] = getBackedUpProperty(propertyName);
+    properties[propertyName] = getBackedUpProperty(property, propertyName);
     subscriptions[getPropertySubscriptionKey(propertyName)] = [];
     var fnSuffix =  _.capitalize(propertyName) + 'Property';
 
     thiz['get' + fnSuffix] = _.partial(getProperty, propertyName);
-    thiz['put' + fnSuffix] = _.partial(putProperty, !property.doNotPersist, propertyName);
+    thiz['put' + fnSuffix] = _.partial(putProperty, !property.doNotPersist, property.cookieBacked, propertyName);
     thiz['delete' + fnSuffix] = _.partial(deleteProperty, !property.doNotPersist, propertyName);
   }
 
@@ -90,9 +92,15 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     return properties[key];
   }
 
-  function putProperty(persist, key, value) {
+  function putProperty(persist, cookieBacked, key, value) {
     properties[key] = value;
-    if(store.enabled && persist) store.set(getPropertyBackupKey(key), value);
+    if(persist) {
+      if(cookieBacked) {
+        CookieManager.createNonExpiringCookie(key, value);
+      } else {
+        if(store.enabled) store.set(getPropertyBackupKey(key), value);
+      }
+    }
     invokeSubscribedActions(getPropertySubscriptionKey(key));
   }
 
