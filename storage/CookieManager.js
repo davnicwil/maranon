@@ -10,7 +10,7 @@ function createCookie(name, value, days) {
   } else {
     expires = "";
   }
-  document.cookie = escape(name) + "=" + JSON.stringify(value) + expires + "; path=/";
+  document.cookie = escape(name) + "=" + escape(value) + expires + "; path=/";
 }
 
 function createNonExpiringCookie(name, value) {
@@ -23,7 +23,7 @@ function readCookie(name) {
   for (var i = 0; i < ca.length; i++) {
     var c = ca[i];
     while (c.charAt(0) === ' ' || c.charAt(0) === ',') c = c.substring(1, c.length);
-    if (c.indexOf(nameEQ) === 0) return JSON.parse(c.substring(nameEQ.length, c.length));
+    if (c.indexOf(nameEQ) === 0) return escape(c.substring(nameEQ.length, c.length));
   }
   return null;
 }
