@@ -364,11 +364,11 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
 
   function wipeProperties() {
     _.forOwn(schema.properties, wipeProperty);
-    properties = {};
   }
 
   function wipeProperty(property, propertyName) {
     if(property.doNotWipe) return;
+    delete properties[propertyName];
     if(!property.doNotPersist) store.remove(getPropertyBackupKey(propertyName));
     if(property.cookieBacked) CookieManager.deleteCookie(propertyName);
   }
