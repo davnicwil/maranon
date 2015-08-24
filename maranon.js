@@ -79,9 +79,9 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
   }
 
   function initPropertyCache(property, propertyName) {
+    subscriptions[getPropertySubscriptionKey(propertyName)] = [];
     if(properties[propertyName]) return;
     properties[propertyName] = getBackedUpProperty(property, propertyName);
-    subscriptions[getPropertySubscriptionKey(propertyName)] = [];
     var fnSuffix =  _.capitalize(propertyName) + 'Property';
 
     thiz['get' + fnSuffix] = _.partial(getProperty, propertyName);
