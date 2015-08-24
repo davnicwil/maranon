@@ -336,8 +336,8 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
   function wipe() {
     wipeCaches();
     wipeManyToManys();
-    wipeSubscriptions();
     wipeProperties();
+    wipeSubscriptions();
   }
 
   function wipeCaches() {
@@ -362,10 +362,15 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     subscriptions = {};
   }
 
+  function wipeProperties() {
+    _.forOwn(schema.properties, wipeProperty);
+    properties = {};
+  }
+
   function wipeProperty(property, propertyName) {
     if(property.doNotWipe) return;
-    delete properties[propertyName];
     if(!property.doNotPersist) store.remove(getPropertyBackupKey(propertyName));
+    if(property.cookieBacked) CookieManager.deleteCookie(propertyName);
   }
 
   thiz.subscribe = subscribe;

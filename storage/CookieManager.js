@@ -35,5 +35,5 @@ function deleteCookie(name) {
 module.exports = {
   createNonExpiringCookie: createNonExpiringCookie,
   read: readCookie,
-  delete: deleteCookie
+  deleteCookie: deleteCookie
 };
