@@ -79,6 +79,7 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
   }
 
   function initPropertyCache(property, propertyName) {
+    if(properties[propertyName]) return;
     properties[propertyName] = getBackedUpProperty(property, propertyName);
     subscriptions[getPropertySubscriptionKey(propertyName)] = [];
     var fnSuffix =  _.capitalize(propertyName) + 'Property';
@@ -338,6 +339,7 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     wipeManyToManys();
     wipeProperties();
     wipeSubscriptions();
+    init();
   }
 
   function wipeCaches() {
