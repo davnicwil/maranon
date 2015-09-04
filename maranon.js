@@ -179,9 +179,6 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     // add getters for specified getBy properties (return array of 0 or more elements)
     _.each(type.getBy, _.partial(addGetsForTypeAndProperty, typeNameFnSuffixPlural, typeName));
 
-    // add getters for specified one-to-many relations
-    _.each(type.hasMany, _.partial(addGetsForTypeHasManyRelation, typeNameFnSuffix, typeName));
-
     // add setters
     thiz['put' + typeNameFnSuffix] = _.partial(putAndInvokeSubscribedActions, typeName);
     thiz['put' + typeNameFnSuffixPlural] = _.partial(putsAndInvokeSubscribedActions, typeName);
@@ -193,10 +190,6 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
 
   function addGetsForTypeAndProperty(typeNameFnSuffixPlural, typeName, property) {
     thiz['get' + typeNameFnSuffixPlural + 'By' + _.capitalize(property)] = _.partial(getsByProperty, typeName, property);
-  }
-
-  function addGetsForTypeHasManyRelation(typeNameFnSuffix, typeName, hasManyEntity) {
-    thiz['get' + typeNameFnSuffix + 'By' + _.capitalize(property)] = _.partial(getByIndexedProperty, typeName, property);
   }
 
   function getFromCache(cache, id) {
@@ -261,6 +254,7 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
                     .map(_.partial(makeManyToManyPair, fromTypeName, toTypeName, fromId))
                     .value();
     manyToManys[manyToManyName].pairs = newPairs.concat(_.reject(manyToManys[manyToManyName].pairs, looselyEquals(fromTypeName, fromId)));
+    manyToManys[manyToManyName].populated = true;
   }
 
   function looselyEquals(property, value) {
