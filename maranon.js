@@ -21,7 +21,7 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
 
   function initTypeCache(type, typeName) {
     caches[typeName] = getBackedUpCache(typeName) || Cache(type);
-    subscriptions[typeName] = [];
+    if(!subscriptions[typeName]) subscriptions[typeName] = [];
     addGettersAndSettersFor(type, typeName);
   }
 
@@ -79,7 +79,7 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
   }
 
   function initPropertyCache(property, propertyName) {
-    subscriptions[getPropertySubscriptionKey(propertyName)] = [];
+    if(!subscriptions[getPropertySubscriptionKey(propertyName)]) subscriptions[getPropertySubscriptionKey(propertyName)] = [];
     if(properties[propertyName]) return;
     properties[propertyName] = getBackedUpProperty(property, propertyName);
     var fnSuffix =  _.capitalize(propertyName) + 'Property';
@@ -210,7 +210,7 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
 
   function getAll(typeName) {
     var cache = caches[typeName];
-    return arrayResult(_.values(cache.entities), cache);
+    return cache ? arrayResult(_.values(cache.entities), cache) : [];
   }
 
   function arrayResult(arr, cache) {
@@ -292,6 +292,10 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     _.invoke(subscriptions[typeName], 'action');
   }
 
+  function invokeAllSubscribedActions() {
+    _.forOwn(subscriptions, function(v, k) { invokeSubscribedActions(k); });
+  }
+
   function subscribe(id) {
     return {
       toDo: function(action) {
@@ -332,7 +336,7 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
     wipeCaches();
     wipeManyToManys();
     wipeProperties();
-    wipeSubscriptions();
+    invokeAllSubscribedActions();
     init();
   }
 
@@ -352,10 +356,6 @@ var Maranon = function(schema, enableStore, cacheBackupPeriod) {
 
   function wipeManyToManyBackup(manyToMany, manyToManyName) {
     store.remove(getManyToManyBackupKey(manyToManyName));
-  }
-
-  function wipeSubscriptions() {
-    subscriptions = {};
   }
 
   function wipeProperties() {
